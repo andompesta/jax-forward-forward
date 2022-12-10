@@ -1,0 +1,13 @@
+{
+    "python.defaultInterpreterPath": "${MINICONDA_ENVS}/gflownet/bin/python",
+    "debug.console.fontFamily": "Cascadia Code Light",
+    "debug.console.fontSize": 15,
+    "debug.console.lineHeight": 21,
+    "python.linting.enabled": true,
+    "python.linting.pylintArgs": [
+        "--extension-pkg-whitelist=cv2"
+    ],
+    "python.linting.flake8Enabled": true,
+    "python.formatting.provider": "autopep8",
+    "python.formatting.autopep8Args": ["--max-line-length", "120", "--experimental"],
+}
