@@ -1,6 +1,11 @@
-from src.dataset import get_mnist_dataset, ToTensor, Normalize
+from src.dataset import (
+    get_mnist_dataset,
+    get_mnist_dataloader,
+    ToTensor,
+    Normalize,
+)
 from src.utils import show_image
-from src.model import FFNet
+from src.model import FFNet, create_training_states
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from torchvision.transforms import Compose
@@ -17,6 +22,12 @@ def get_args() -> Namespace:
         "--base_path",
         default=Path.cwd(),
         type=lambda x: Path(x)
+    )
+
+    parser.add_argument(
+        "--learning_rate",
+        default=3e-4,
+        type=float
     )
 
     return parser.parse_args()
@@ -40,26 +51,27 @@ if __name__ == "__main__":
         transform=img_transforms,
     )
 
-    net = FFNet()
+    train_dl = get_mnist_dataloader(
+        train_dataset,
+        False,
+        10,
+    )
+
+    for batch in train_dl:
+        show_image(batch["pos"][0])
+        show_image(batch["neg"][0])
+        print(batch["labels"][0])
+        break
 
     rng = jax.random.PRNGKey(0)
     rng, init_rng = jax.random.split(rng)
 
-    # initialize parameters by passing a template image
-    init_state = net.init(rng, np.ones([1, 28, 28, 1]))
-    params = init_state["params"]
-
-    tx = optax.sgd(3e-5, 0.9)
-    ts = flax.train_state.TrainState.create(
-        apply_fn=net.apply,
-        params=params,
-        tx=tx
+    training_states = create_training_states(
+        rng,
+        args.learning_rate,
     )
 
-    for img, l in train_dataset:
-        show_image(img)
-        
-        break
+    
     
     test_dataset = get_mnist_dataset(
         dataset_path.as_posix(),
