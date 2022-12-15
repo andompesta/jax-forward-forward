@@ -83,9 +83,10 @@ class Normalize(object):
         self.mean = np.array(mean, dtype=np.float32)
         self.std = np.array(std, dtype=np.float32)
 
-
     def __call__(self, img: np.array) -> np.array:
+        img = img / 255
         return (img - self.mean) / self.std
+
 
 def get_mnist_dataset(
     path: str,
@@ -97,4 +98,55 @@ def get_mnist_dataset(
         download=True,
         train=train,
         transform=transform
+    )
+
+
+def mnist_collate_fn(batch):
+    pos, labels = zip(*batch)
+    pos = np.stack(pos).astype(np.float32)
+
+    shape = pos.shape
+    img_size = shape[1] * shape[2] * shape[3]
+
+    # get positive index
+    idx = [(i * img_size) + l for i, l in enumerate(labels)]
+    # get negative index
+    neg_idx = [
+        (i * img_size) + l for i, l in enumerate(
+            np.random.randint(0, 10, size=len(idx))
+        )
+    ]
+
+    # set all labels for positive cases to zero
+    pos[:, 0, 0:10, :] = 0
+    # flatten for add label infpor
+    pos = pos.flatten()
+    # create neg examples
+    neg = np.copy(pos)
+    # add correct labels information
+    pos[idx] = 1
+    # add random label informaton to negative cases
+    neg[neg_idx] = 1
+    # reshape
+    pos = pos.reshape(shape)
+    neg = neg.reshape(shape)
+    labels = np.array(labels).astype(np.float32)
+
+    return dict(
+        pos=pos,
+        neg=neg,
+        labels=labels
+    )
+
+
+def get_mnist_dataloader(
+    dataset: data.Dataset,
+    shuffle: bool,
+    batch_size: int,
+):
+    return data.DataLoader(
+        dataset=dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        collate_fn=mnist_collate_fn
     )
