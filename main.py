@@ -1,12 +1,14 @@
-from src.dataset import NumpyLoader, get_mnist_dataset, ToTensor, Normalize
+from src.dataset import get_mnist_dataset, ToTensor, Normalize
 from src.utils import show_image
+from src.model import FFNet
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from torchvision.transforms import Compose
 
 import numpy as np
+import flax
 import jax
-from flax import linen as nn
+import optax
 
 
 def get_args() -> Namespace:
@@ -38,8 +40,25 @@ if __name__ == "__main__":
         transform=img_transforms,
     )
 
+    net = FFNet()
+
+    rng = jax.random.PRNGKey(0)
+    rng, init_rng = jax.random.split(rng)
+
+    # initialize parameters by passing a template image
+    init_state = net.init(rng, np.ones([1, 28, 28, 1]))
+    params = init_state["params"]
+
+    tx = optax.sgd(3e-5, 0.9)
+    ts = flax.train_state.TrainState.create(
+        apply_fn=net.apply,
+        params=params,
+        tx=tx
+    )
+
     for img, l in train_dataset:
         show_image(img)
+        
         break
     
     test_dataset = get_mnist_dataset(
